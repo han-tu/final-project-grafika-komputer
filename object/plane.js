@@ -1,12 +1,6 @@
 import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r132/build/three.module.js';
 
-function makeObject(planeSize, textureUrl) {
-    let obj = new THREE.Mesh(makeGeometry(planeSize), makeMaterial(planeSize, textureUrl));
-    obj.receiveShadow = true;
-    return obj;
-}
-
-function loadTexture(planeSize, textureUrl) {
+export function makePlane(planeSize, textureUrl) {
     const loader = new THREE.TextureLoader();
     let texture = loader.load(textureUrl);
 
@@ -15,20 +9,17 @@ function loadTexture(planeSize, textureUrl) {
     texture.magFilter = THREE.NearestFilter;
     const repeats = planeSize / 2;
     texture.repeat.set(repeats, repeats);
-    return texture;
-}
 
-function makeGeometry(planeSize) {
-    let geometry = new THREE.PlaneGeometry(planeSize, planeSize);
-    return geometry;
-}
-
-function makeMaterial(planeSize, textureUrl) {
     let material = new THREE.MeshPhongMaterial({
-        map: loadTexture(planeSize, textureUrl),
+        map: texture,
         side: THREE.DoubleSide,
     });
-    return material;
+
+    let geometry = new THREE.PlaneGeometry(planeSize, planeSize);
+
+    let obj = new THREE.Mesh(geometry, material);
+    obj.receiveShadow = true;
+    return obj;
 }
 
 
