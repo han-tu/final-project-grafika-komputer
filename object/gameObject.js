@@ -2,6 +2,6 @@ import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threej
 
 export class gameObject {
     constructor() {
-
+        
     }
 }
