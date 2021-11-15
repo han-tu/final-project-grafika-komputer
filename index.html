@@ -26,34 +26,38 @@
 </html>
 
 <script type="module">
-    import { PointerLockControls } from 'https://threejsfundamentals.org/threejs/resources/threejs/r132/examples/jsm/controls/PointerLockControls.js';
     import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r132/build/three.module.js';
 
-    import { createCamera } from './object/camera.js';
-    import { createScene } from './object/scene.js';
+    import { createCamera } from './object/initialGraphics/camera.js';
+    import { createScene } from './object/initialGraphics/scene.js';
+    import { createHemisphere } from './object/initialGraphics/light.js';
+    import { createControls } from './object/initialGraphics/pointerLock.js';
+    import { createRenderer } from './object/initialGraphics/renderer.js';
+    
+    import { onWindowResize } from './object/utils/onWindowResize.js';
+
     import { createPlane } from './object/plane.js';
-    import { createHemisphere } from './object/light.js';
+
     import { getOnKeyUpEvent } from './event/onKeyUp.js';
     import { getOnKeyDownEvent } from './event/onKeyDown.js';
     import { Move } from './event/Move.js';
 
-    let move = new Move();
-
-    let prevTime = performance.now();
-    const velocity = new THREE.Vector3();
-    const direction = new THREE.Vector3();
-
-    let objects = [];
-
+    let move = new Move();                              // Status Gerakan
     let camera = createCamera(window);                  // Camera
     let scene = createScene(0xffffff);                  // Scene
     let light = createHemisphere(0.5, 20, 0.75, scene); // Light
-
+    let renderer = createRenderer(window, document);    // Renderer
+    
+    // Pointer Lock Control
+    const blocker = document.getElementById('blocker');
+    const instructions = document.getElementById('instructions');
+    let controls = createControls(camera, document.body, blocker, instructions, scene) ;
+    
     // Plane
     let textureUrl = 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/weathered_brown_planks/weathered_brown_planks_diff_4k.jpg';
     let planeSize = 2000;
     let plane = createPlane(planeSize, textureUrl, scene);
-
+    
     {
         let cubeSize = 10;
         const geometryWall = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize); //ukuran shape box disesuaikan
@@ -64,70 +68,34 @@
         scene.add(wall);
     }
 
-    let controls;
-    const blocker = document.getElementById('blocker');
-    const instructions = document.getElementById('instructions');
-    { // Pointer Lock Control
-        controls = new PointerLockControls(camera, document.body)
-
-        instructions.addEventListener('click', function () {
-            controls.lock();
-        });
-
-        controls.addEventListener('lock', function () {
-            instructions.style.display = 'none';
-            blocker.style.display = 'none';
-        });
-
-        controls.addEventListener('unlock', function () {
-            blocker.style.display = 'block';
-            instructions.style.display = '';
-        });
-
-        scene.add(controls.getObject());
-    }
-
     // Add Event to EventListener on Page
     document.addEventListener('keydown', getOnKeyDownEvent(move, velocity));
     document.addEventListener('keyup', getOnKeyUpEvent(move));
-
-
-    let renderer;
-    { // Renderer
-        renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-    }
-
-    // Resize Window Event
-    function onWindowResize() {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-    window.addEventListener('resize', onWindowResize);
-
-
+    window.addEventListener('resize', onWindowResize);  // Resize Window Event
+    
     let raycaster;
     { // Raycaster
         raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 10);
     }
-
-
+    
+    let prevTime = performance.now();
+    const velocity = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+    let objects = [];
+    
     function animate() {
-
+        
         requestAnimationFrame(animate);
-
+        
         const time = performance.now();
-
+        
         if (controls.isLocked === true) {
-
+            
             raycaster.ray.origin.copy(controls.getObject().position);
             raycaster.ray.origin.y -= 10;
-
+            
             const intersections = raycaster.intersectObjects(objects, false);
-
+            
             const onObject = intersections.length > 0;
 
             const delta = (time - prevTime) / 1000;
@@ -152,9 +120,6 @@
                 else {
                     console.log(intersections);
                 }
-
-
-
             }
 
             controls.moveRight(- velocity.x * delta);
