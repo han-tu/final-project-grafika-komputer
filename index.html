@@ -32,6 +32,7 @@
     import { createCamera } from './object/camera.js';
     import { createScene } from './object/scene.js';
     import { createPlane } from './object/plane.js';
+    import { createBox } from './object/wall.js';
     import { createHemisphere } from './object/light.js';
     import { getOnKeyUpEvent } from './event/onKeyUp.js';
     import { getOnKeyDownEvent } from './event/onKeyDown.js';
@@ -54,15 +55,14 @@
     let planeSize = 2000;
     let plane = createPlane(planeSize, textureUrl, scene);
 
-    {
-        let cubeSize = 10;
-        const geometryWall = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize); //ukuran shape box disesuaikan
-        const materialWall = new THREE.MeshPhongMaterial({ color: 0xFF3E2723 });
-        const wall = new THREE.Mesh(geometryWall, materialWall);
-        wall.position.set(20, cubeSize / 2, 20);
-        objects.push(wall);
-        scene.add(wall);
-    }
+    // Wall
+    let cubeSize = 10;
+    let cubeColor = 0xFF3E2723;
+    let wall = createBox(cubeSize, cubeColor);
+    wall.position.set(20, cubeSize / 2, 20);
+    objects.push(wall);
+    scene.add(wall);
+    
 
     let controls;
     const blocker = document.getElementById('blocker');
