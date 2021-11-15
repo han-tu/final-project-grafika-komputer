@@ -33,12 +33,10 @@
     import { createHemisphere } from './object/initialGraphics/light.js';
     import { createControls } from './object/initialGraphics/pointerLock.js';
     import { createRenderer } from './object/initialGraphics/renderer.js';
-    
-    import { onWindowResize } from './utils/onWindowResize.js';
 
     import { createPlane } from './object/plane.js';
     import { createBox } from './object/wall.js';
-    
+
     import { getOnKeyUpEvent } from './event/onKeyUp.js';
     import { getOnKeyDownEvent } from './event/onKeyDown.js';
     import { Move } from './event/Move.js';
@@ -51,12 +49,12 @@
     let objects = [];                                   // Init Objects
     const velocity = new THREE.Vector3();               // Init Velocity
     const direction = new THREE.Vector3();              // Init Direction
-    
+
     // Pointer Lock Control
     const blocker = document.getElementById('blocker');
     const instructions = document.getElementById('instructions');
-    let controls = createControls(camera, document.body, blocker, instructions, scene) ;
-    
+    let controls = createControls(camera, document.body, blocker, instructions, scene);
+
     // Plane
     let textureUrl = 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/4k/weathered_brown_planks/weathered_brown_planks_diff_4k.jpg';
     let planeSize = 2000;
@@ -69,34 +67,36 @@
     wall.position.set(20, cubeSize / 2, 20);
     objects.push(wall);
     scene.add(wall);
-    
 
     // Add Event to EventListener on Page
     document.addEventListener('keydown', getOnKeyDownEvent(move, velocity));
     document.addEventListener('keyup', getOnKeyUpEvent(move));
     window.addEventListener('resize', onWindowResize);  // Resize Window Event
-    
+
     let raycaster;
     { // Raycaster
         raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 10);
     }
-    
+
     let prevTime = performance.now();
-   
-    
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
     function animate() {
-        
         requestAnimationFrame(animate);
-        
+
         const time = performance.now();
-        
         if (controls.isLocked === true) {
-            
+
             raycaster.ray.origin.copy(controls.getObject().position);
             raycaster.ray.origin.y -= 10;
-            
+
             const intersections = raycaster.intersectObjects(objects, false);
-            
+
             const onObject = intersections.length > 0;
 
             const delta = (time - prevTime) / 1000;
