@@ -1,6 +1,6 @@
 import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r132/build/three.module.js';
 
-export function makePlane(planeSize, textureUrl) {
+export function createPlane(planeSize, textureUrl, scene) {
     const loader = new THREE.TextureLoader();
     let texture = loader.load(textureUrl);
 
@@ -19,6 +19,8 @@ export function makePlane(planeSize, textureUrl) {
 
     let obj = new THREE.Mesh(geometry, material);
     obj.receiveShadow = true;
+    obj.rotateX(- Math.PI / 2);
+    scene.add(obj);
     return obj;
 }
 
