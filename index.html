@@ -6,20 +6,39 @@
     <meta charset="utf-8">
     <title>FP Grafika Komputer</title>
     <link type="text/css" rel="stylesheet" href="style.css">
+    <script src="lib/jquery.min.js"></script>
+    <script src="lib/underscore-min.js"></script>
+
+    <!-- Latest compiled and minified CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Latest compiled JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        function restart() {
+            location.reload();
+        }
+    </script>
+
 </head>
 
 <body>
     <div id="blocker">
         <div id="instructions">
-            <p style="font-size:36px">
+            <p id="click" style="font-size:36px; color: #ffffff;">
                 Click to play
             </p>
-            <p>
+            <p id="ins" style="color: #ffffff;">
                 Move: WASD<br />
                 Jump: SPACE<br />
-                Look: MOUSE
+                Look: MOUSE <br>
+                <br>
+                Task: Get out from maze and jump onto red box
             </p>
+            <button class="btn btn-primary" onclick="restart()">New Game</button>
         </div>
+
     </div>
 </body>
 
@@ -27,6 +46,7 @@
 
 <script type="module">
     import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r132/build/three.module.js';
+    import { THREEx } from './threex.daynight-master/threex.daynight.js';
 
     import { createCamera } from './object/initialGraphics/camera.js';
     import { createScene } from './object/initialGraphics/scene.js';
@@ -35,11 +55,14 @@
     import { createRenderer } from './object/initialGraphics/renderer.js';
 
     import { createPlane } from './object/plane.js';
-    import { createBox } from './object/wall.js';
+    import { createFinishBox } from './object/finishBox.js';
+    import { generateWallObject } from './object/generateWallObject.js';
 
     import { getOnKeyUpEvent } from './event/onKeyUp.js';
     import { getOnKeyDownEvent } from './event/onKeyDown.js';
     import { Move } from './event/Move.js';
+
+    import { Maze } from './src/maze.js';
 
     let move = new Move();                              // Status Gerakan
     let camera = createCamera(window);                  // Camera
@@ -49,6 +72,11 @@
     let objects = [];                                   // Init Objects
     const velocity = new THREE.Vector3();               // Init Velocity
     const direction = new THREE.Vector3();              // Init Direction
+    let lastTimeMsec = null;
+    let sunAngle = -1 / 6 * Math.PI * 2;
+    let dayDuration = 60;
+
+    let movementRight;
 
     // Pointer Lock Control
     const blocker = document.getElementById('blocker');
@@ -60,23 +88,53 @@
     let planeSize = 2000;
     let plane = createPlane(planeSize, textureUrl, scene);
 
-    // Wall
-    let cubeSize = 10;
-    let cubeColor = 0xFF3E2723;
-    let wall = createBox(cubeSize, cubeColor);
-    wall.position.set(20, cubeSize / 2, 20);
-    objects.push(wall);
-    scene.add(wall);
+    // Maze
+    let maze = new Maze(scene, objects);
+    maze.generate();
+    maze.draw();
+    // maze.solve();
+
+    // Finish Box
+    let finish = [];
+    let f1 = createFinishBox(20, 0xff1234, 415, 415, scene, finish);
+    let f2 = createFinishBox(20, 0xff1234, 415, -415, scene, finish);
+    let f3 = createFinishBox(20, 0xff1234, -415, 415, scene, finish);
+    let f4 = createFinishBox(20, 0xff1234, -415, -415, scene, finish);
+
+    // Finish Logic
+    function gameOver() {
+        let ins = document.getElementById('ins');
+        let click = document.getElementById('click');
+
+        ins.style.display = 'none';
+        click.innerHTML = 'Congratulation! You came out from maze safely';
+
+        controls.unlock();
+    }
+
+    // Day Night Environment
+    var sunSphere = new THREEx.DayNight.SunSphere();
+    scene.add(sunSphere.object3d);
+    var sunLight = new THREEx.DayNight.SunLight();
+    scene.add(sunLight.object3d);
+    var skydom = new THREEx.DayNight.Skydom();
+    scene.add(skydom.object3d);
+    var starField = new THREEx.DayNight.StarField();
+    scene.add(starField.object3d);
 
     // Add Event to EventListener on Page
     document.addEventListener('keydown', getOnKeyDownEvent(move, velocity));
     document.addEventListener('keyup', getOnKeyUpEvent(move));
     window.addEventListener('resize', onWindowResize);  // Resize Window Event
 
-    let raycaster;
-    { // Raycaster
-        raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 10);
-    }
+    // Raycaster
+    let raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 10);
+    let collisionRay = [
+        new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, 0, -1), 0, 1),
+        new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, 0, 1), 0, 1),
+        new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(1, 0, 0), 0, 2),
+        new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(-1, 0, 0), 0, 2)
+    ];
 
     let prevTime = performance.now();
 
@@ -92,19 +150,49 @@
         const time = performance.now();
         if (controls.isLocked === true) {
 
+            // Jump Raycaster
             raycaster.ray.origin.copy(controls.getObject().position);
             raycaster.ray.origin.y -= 10;
-
             const intersections = raycaster.intersectObjects(objects, false);
-
             const onObject = intersections.length > 0;
+
+            // Finish Intersection
+            const finIntersect = raycaster.intersectObjects(finish, false);
+            const isFinish = finIntersect.length > 0;
+
+            if (isFinish) {
+                gameOver();
+            }
+
+            let intersectDir;
+            let front, back, right, left;
+
+            collisionRay[0].ray.origin.copy(controls.getObject().position);
+            collisionRay[0].ray.origin.z -= 1;
+            intersectDir = collisionRay[0].intersectObjects(objects, false);
+            front = intersectDir.length > 0;
+
+            collisionRay[1].ray.origin.copy(controls.getObject().position);
+            collisionRay[1].ray.origin.z += 1;
+            intersectDir = collisionRay[1].intersectObjects(objects, false);
+            back = intersectDir.length > 0;
+
+            collisionRay[2].ray.origin.copy(controls.getObject().position);
+            collisionRay[2].ray.origin.x += 1;
+            intersectDir = collisionRay[2].intersectObjects(objects, false);
+            right = intersectDir.length > 0;
+
+            collisionRay[3].ray.origin.copy(controls.getObject().position);
+            collisionRay[3].ray.origin.x -= 1;
+            intersectDir = collisionRay[3].intersectObjects(objects, false);
+            left = intersectDir.length > 0;
 
             const delta = (time - prevTime) / 1000;
 
-            velocity.x -= velocity.x * 10.0 * delta;
-            velocity.z -= velocity.z * 10.0 * delta;
+            velocity.x -= velocity.x * 9.0 * delta;
+            velocity.z -= velocity.z * 9.0 * delta;
 
-            velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+            velocity.y -= 9.8 * 120.0 * delta; //gravity
 
             direction.z = Number(move.getMoveForwardStatus()) - Number(move.getMoveBackwardStatus());
             direction.x = Number(move.getMoveRightStatus()) - Number(move.getMoveLeftStatus());
@@ -118,13 +206,51 @@
                     velocity.y = 0;
                     move.setCanJumpStatus(true);
                 }
-                else {
-                    console.log(intersections);
-                }
             }
 
-            controls.moveRight(- velocity.x * delta);
-            controls.moveForward(- velocity.z * delta);
+            if (direction.x < 0) {
+                if (front) controls.getObject().position.z = controls.getObject().position.z + velocity.x * delta;
+                if (back) controls.getObject().position.z = controls.getObject().position.z - velocity.x * delta;
+                if (left) controls.getObject().position.x = controls.getObject().position.x + velocity.x * delta;
+                if (right) controls.getObject().position.x = controls.getObject().position.x - velocity.x * delta;
+            }
+
+            if (direction.x > 0) {
+                if (front) controls.getObject().position.z = controls.getObject().position.z - velocity.x * delta;
+                if (back) controls.getObject().position.z = controls.getObject().position.z + velocity.x * delta;
+                if (left) controls.getObject().position.x = controls.getObject().position.x - velocity.x * delta;
+                if (right) controls.getObject().position.x = controls.getObject().position.x + velocity.x * delta;
+            }
+
+            if (direction.z < 0) {
+                if (front) controls.getObject().position.z = controls.getObject().position.z + velocity.z * delta;
+                if (back) controls.getObject().position.z = controls.getObject().position.z - velocity.z * delta;
+                if (left) controls.getObject().position.x = controls.getObject().position.x + velocity.z * delta;
+                if (right) controls.getObject().position.x = controls.getObject().position.x - velocity.z * delta;
+            }
+
+            if (direction.z > 0) {
+                if (front) controls.getObject().position.z = controls.getObject().position.z - velocity.z * delta;
+                if (back) controls.getObject().position.z = controls.getObject().position.z + velocity.z * delta;
+                if (left) controls.getObject().position.x = controls.getObject().position.x - velocity.z * delta;
+                if (right) controls.getObject().position.x = controls.getObject().position.x + velocity.z * delta;
+            }
+
+            if (direction.z == 0 && direction.x == 0) {
+                // if (front) controls.moveForward(- velocity.z * delta * 0);
+
+                // else {
+                controls.moveRight(- velocity.x * delta);
+                controls.moveForward(- velocity.z * delta);
+                // }
+            }
+            else {
+                controls.moveRight(- velocity.x * delta);
+                controls.moveForward(- velocity.z * delta);
+            }
+
+
+            // console.log(velocity);
 
             controls.getObject().position.y += (velocity.y * delta); // new behavior
 
@@ -137,6 +263,13 @@
 
             }
 
+            // Update Day Night
+
+            sunAngle	+= delta/dayDuration * Math.PI*2;
+            sunSphere.update(sunAngle);
+            sunLight.update(sunAngle);
+            skydom.update(sunAngle);
+            starField.update(sunAngle);
         }
 
         prevTime = time;
