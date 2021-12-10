@@ -9,9 +9,9 @@ THREEx.DayNight.baseURL	= '../'
 
 THREEx.DayNight.currentPhase	= function(sunAngle){
 	if( Math.sin(sunAngle) > Math.sin(0) ){
-		return 'day'
+		return 'night'
 	}else if( Math.sin(sunAngle) > Math.sin(-Math.PI/6) ){
-		return 'twilight'
+		return 'night'
 	}else{
 		return 'night'
 	}
@@ -56,12 +56,24 @@ THREEx.DayNight.StarField	= function(){
 
 THREEx.DayNight.SunLight	= function(){
 	var light	= new THREE.DirectionalLight( 0xffffff, 1 );
+	let hemisphereLight = new THREE.HemisphereLight(0xeeeeff, 0x777788, 0.05);
 	this.object3d	= light
+	this.hemiLight = hemisphereLight;
 	
 	this.update	= function(sunAngle){
-		light.position.x = 0;
+		light.position.x = 30000;
 		light.position.y = Math.sin(sunAngle) * 90000;
 		light.position.z = Math.cos(sunAngle) * 90000;
+
+		hemisphereLight.position.x = 0;
+		hemisphereLight.position.y = Math.sin(sunAngle) * 90000;
+		hemisphereLight.position.z = Math.cos(sunAngle) * 90000;
+
+		// if (THREEx.DayNight.currentPhase(sunAngle) == 'day') {
+		// }
+		// else {
+		// 	hemisphereLight.position.set(0.5, -20, 0.75);
+		// }
 // console.log('Phase ', THREEx.DayNight.currentPhase(sunAngle))
 
 		var phase	= THREEx.DayNight.currentPhase(sunAngle)
@@ -89,7 +101,7 @@ THREEx.DayNight.SunSphere	= function(){
 	this.object3d	= mesh
 
 	this.update	= function(sunAngle){
-		mesh.position.x = 0;
+		mesh.position.x = 200;
 		mesh.position.y = Math.sin(sunAngle) * 900;
 		mesh.position.z = Math.cos(sunAngle) * 900;
 

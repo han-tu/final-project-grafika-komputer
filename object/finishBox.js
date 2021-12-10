@@ -7,7 +7,7 @@ export function createFinishBox(boxSize, boxColor, locX, locZ, scene, finish){
             color: boxColor
         });
     const wall = new THREE.Mesh(geometryWall, materialWall);
-    wall.position.set(locX, -5, locZ);
+    wall.position.set(locX, -9.9, locZ);
     scene.add(wall);
     finish.push(wall);
     return wall;

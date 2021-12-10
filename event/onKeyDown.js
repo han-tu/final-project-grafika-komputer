@@ -1,4 +1,4 @@
-export function getOnKeyDownEvent(move, velocity) {
+export function getOnKeyDownEvent(move, velocity, flashlight) {
     const onKeyDown = function (event) {
         switch (event.code) {
             case 'ArrowUp':
@@ -24,6 +24,11 @@ export function getOnKeyDownEvent(move, velocity) {
             case 'Space':
                 if (move.getCanJumpStatus() === true) velocity.y += 250;
                 move.setCanJumpStatus(false);
+                break;
+            
+            case 'KeyL':
+                if (flashlight.intensity == 1) flashlight.intensity = 0;
+                else flashlight.intensity = 1;
                 break;
         }
     };

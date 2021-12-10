@@ -46,6 +46,7 @@
 
 <script type="module">
     import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r132/build/three.module.js';
+    import { GLTFLoader } from 'https://threejsfundamentals.org/threejs/resources/threejs/r132/examples/jsm/loaders/GLTFLoader.js';
     import { THREEx } from './threex.daynight-master/threex.daynight.js';
 
     import { createCamera } from './object/initialGraphics/camera.js';
@@ -56,27 +57,46 @@
 
     import { createPlane } from './object/plane.js';
     import { createFinishBox } from './object/finishBox.js';
-    import { generateWallObject } from './object/generateWallObject.js';
+    import { createTrap } from './object/trap.js';
+    import { createMuzzleFlash } from './object/flash.js';
+    import { createFlashLight } from './object/flashLight.js';
+    import { createCrosshair } from './object/crosshair.js';
+    import { createGun } from './object/gun.js';
+    import { Maze } from './object/maze/maze.js';
 
     import { getOnKeyUpEvent } from './event/onKeyUp.js';
     import { getOnKeyDownEvent } from './event/onKeyDown.js';
     import { Move } from './event/Move.js';
 
-    import { Maze } from './src/maze.js';
+    import { loadAudio } from './lib/loadAudio.js';
 
     let move = new Move();                              // Status Gerakan
     let camera = createCamera(window);                  // Camera
     let scene = createScene(0xffffff);                  // Scene
-    let light = createHemisphere(0.5, 20, 0.75, scene); // Light
+    // let light = createHemisphere(0.5, 20, 0.75, scene); // Light
     let renderer = createRenderer(window, document);    // Renderer
     let objects = [];                                   // Init Objects
     const velocity = new THREE.Vector3();               // Init Velocity
     const direction = new THREE.Vector3();              // Init Direction
     let lastTimeMsec = null;
     let sunAngle = -1 / 6 * Math.PI * 2;
-    let dayDuration = 60;
+    let dayDuration = 180;                               // Durasi Sehari
+    let traps = [];
+    let flashLight;
 
-    let movementRight;
+    // Keperluan Senjata
+    let gun = new THREE.Group();
+    let shooting = false;
+    let flash;
+    let flashTimer = 0;
+    const audioListener = new THREE.AudioListener();
+    const gunSounds = [];
+    const hitSounds = [];
+    const trapSounds = [];
+    const winSounds = [];
+    const hitSoundLoader = new THREE.AudioLoader();
+    const audioLoader = new THREE.AudioLoader();
+    let sprite;
 
     // Pointer Lock Control
     const blocker = document.getElementById('blocker');
@@ -92,7 +112,6 @@
     let maze = new Maze(scene, objects);
     maze.generate();
     maze.draw();
-    // maze.solve();
 
     // Finish Box
     let finish = [];
@@ -100,35 +119,23 @@
     let f2 = createFinishBox(20, 0xff1234, 415, -415, scene, finish);
     let f3 = createFinishBox(20, 0xff1234, -415, 415, scene, finish);
     let f4 = createFinishBox(20, 0xff1234, -415, -415, scene, finish);
-
-    // Finish Logic
-    function gameOver() {
-        let ins = document.getElementById('ins');
-        let click = document.getElementById('click');
-
-        ins.style.display = 'none';
-        click.innerHTML = 'Congratulation! You came out from maze safely';
-
-        controls.unlock();
-    }
+    // let f5 = createFinishBox(20, 0xff1234, 0, 0, scene, finish);
 
     // Day Night Environment
-    var sunSphere = new THREEx.DayNight.SunSphere();
+    let sunSphere = new THREEx.DayNight.SunSphere();
     scene.add(sunSphere.object3d);
-    var sunLight = new THREEx.DayNight.SunLight();
+    let sunLight = new THREEx.DayNight.SunLight();
     scene.add(sunLight.object3d);
-    var skydom = new THREEx.DayNight.Skydom();
+    scene.add(sunLight.hemiLight);
+    let skydom = new THREEx.DayNight.Skydom();
     scene.add(skydom.object3d);
-    var starField = new THREEx.DayNight.StarField();
+    let starField = new THREEx.DayNight.StarField();
     scene.add(starField.object3d);
 
-    // Add Event to EventListener on Page
-    document.addEventListener('keydown', getOnKeyDownEvent(move, velocity));
-    document.addEventListener('keyup', getOnKeyUpEvent(move));
-    window.addEventListener('resize', onWindowResize);  // Resize Window Event
 
     // Raycaster
     let raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 10);
+    let raycaster2 = new THREE.Raycaster();
     let collisionRay = [
         new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, 0, -1), 0, 1),
         new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, 0, 1), 0, 1),
@@ -136,7 +143,76 @@
         new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(-1, 0, 0), 0, 2)
     ];
 
-    let prevTime = performance.now();
+    // Muzzle Flash
+    // ------------------------- Menambah light untuk muzzle flash (ketika menembak)
+    flash = createMuzzleFlash(camera);
+
+    // Crosshair
+    // ------------------------- Me-load sprite crosshair
+    sprite = createCrosshair(camera);
+
+    // Objek Senjata
+    createGun(gun, camera);
+
+    // Membuat Trap
+    let countTrap = 100;
+    for (let i = 0; i < countTrap; i++) {
+        createTrap(gachaInt(-10, 10) * 40 + gachaInt(4, 36), gachaInt(-10, 10) * 40 + gachaInt(4, 36), scene, traps, 'assets/3D MODEL/Bear Trap 2/scene.gltf');
+    }
+
+    // Senter Malem
+    flashLight = createFlashLight(camera, sprite);
+    let lightHelper = new THREE.SpotLightHelper( flashLight );
+	// scene.add( lightHelper );
+
+    // Audio
+    // ------------------------ Handling audio
+    for (var i = 0; i < 3; i++) {
+        let gunSound = new THREE.Audio(audioListener);
+        gunSounds.push(gunSound);
+        let hitSound = new THREE.Audio(audioListener);
+        hitSounds.push(hitSound);
+        let trapSound = new THREE.Audio(audioListener);
+        trapSounds.push(trapSound);
+        let winSound = new THREE.Audio(audioListener);
+        winSounds.push(winSound);
+    }
+    camera.add(audioListener);
+
+    // Load Audio
+    loadAudio('./assets/sounds/hit.ogg', hitSoundLoader, hitSounds, gunSounds.length, 2, 0.1)
+    loadAudio('./assets/sounds/Classic.wav', audioLoader, gunSounds, gunSounds.length, 2)
+    loadAudio('./assets/sounds/beartrap.mp3', audioLoader, trapSounds, trapSounds.length, 2)
+    loadAudio('./assets/sounds/win.wav', audioLoader, winSounds, winSounds.length, 1)
+
+    // Add Event to EventListener on Page
+    document.addEventListener('keydown', getOnKeyDownEvent(move, velocity, flashLight));
+    document.addEventListener('keyup', getOnKeyUpEvent(move));
+    window.addEventListener('resize', onWindowResize);  // Resize Window Event
+
+    // Event Tembak
+    // ------------------------- shooting event handling
+    document.addEventListener('mousedown', function (e) {
+        if (controls.isLocked && e.button == 0) {
+            shooting = true;
+            flash.intensity = 1;
+            raycaster2.setFromCamera(new THREE.Vector2(), camera);
+            raycaster2.ray.origin.copy(controls.getObject().position);
+            const intersects = raycaster2.intersectObjects(scene.children);
+
+            for (let i = 0; i < intersects.length; i++) {
+                if (intersects[i].object.id != sprite.id /*&& (targets.includes(intersects[i].object))*/) { //object yang ditembak ada di array "target"
+                    if (shooting) {
+                        shooting = false;
+                        // playHitSound();
+                    }
+                }
+            }
+            playGunSound();
+            shooting = false;
+
+        }
+    }, false);
 
     function onWindowResize() {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -144,15 +220,31 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
+    let prevTime = performance.now();
+
     function animate() {
         requestAnimationFrame(animate);
 
         const time = performance.now();
         if (controls.isLocked === true) {
 
+            // Animasi Muzzle Flash
+            if (flash.intensity > 0) {
+                flashTimer++;
+            }
+            if (flashTimer > 6) {
+                flashTimer = 0;
+                flash.intensity = 0;
+            }
+
+            // menambahkan sprite crosshair
+            var dir = controls.getDirection(direction);
+            var dirV = new THREE.Vector3(dir.x, dir.y, dir.z);
+            dirV.multiplyScalar(2);
+
             // Jump Raycaster
             raycaster.ray.origin.copy(controls.getObject().position);
-            raycaster.ray.origin.y -= 10;
+            raycaster.ray.origin.y -= 9.9;
             const intersections = raycaster.intersectObjects(objects, false);
             const onObject = intersections.length > 0;
 
@@ -160,8 +252,21 @@
             const finIntersect = raycaster.intersectObjects(finish, false);
             const isFinish = finIntersect.length > 0;
 
-            if (isFinish) {
-                gameOver();
+            // Trap Intersection
+            const trapIntersect = raycaster.intersectObjects(traps, true);
+            const isTrap = trapIntersect.length > 0;
+
+            let text;
+            if (isFinish || isTrap) {
+                if (isFinish) {
+                    playWinSound();
+                    text = '<strong class="text-success">Congratulation!</strong> You came out from maze safely';
+                }
+                if (isTrap) {
+                    playTrapSound();
+                    text = '<strong class="text-danger">You dead!</strong> Game Over';
+                }
+                gameOver(text);
             }
 
             let intersectDir;
@@ -265,7 +370,7 @@
 
             // Update Day Night
 
-            sunAngle	+= delta/dayDuration * Math.PI*2;
+            sunAngle += delta / dayDuration * Math.PI * 2;
             sunSphere.update(sunAngle);
             sunLight.update(sunAngle);
             skydom.update(sunAngle);
@@ -278,6 +383,60 @@
 
     }
 
+    // Mulai
     animate();
+    // ---
+
+    // Finish Logic
+    function gameOver(text) {
+        let ins = document.getElementById('ins');
+        let click = document.getElementById('click');
+
+        ins.style.display = 'none';
+        click.innerHTML = text;
+
+        controls.unlock();
+    }
+
+    function playGunSound() {
+        for (var i = 0; i < gunSounds.length; i++) {
+            if (!gunSounds[i].isPlaying) {
+                gunSounds[i].play();
+                break;
+            }
+        }
+    }
+
+    function playHitSound() {
+        for (var i = 0; i < hitSounds.length; i++) {
+            if (!hitSounds[i].isPlaying) {
+                hitSounds[i].play();
+                break;
+            }
+        }
+    }
+
+    function playTrapSound() {
+        for (var i = 0; i < trapSounds.length; i++) {
+            if (!trapSounds[i].isPlaying) {
+                trapSounds[i].play();
+                break;
+            }
+        }
+    }
+
+    function playWinSound() {
+        for (var i = 0; i < winSounds.length; i++) {
+            if (!winSounds[i].isPlaying) {
+                winSounds[i].play();
+                break;
+            }
+        }
+    }
+
+    function gachaInt(st, end) {
+        let x = Math.floor(Math.random() * (end - st));
+        return x + st;
+    }
 
 </script>
