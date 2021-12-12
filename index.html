@@ -63,6 +63,7 @@
     import { createCrosshair } from './object/crosshair.js';
     import { createGun } from './object/gun.js';
     import { Maze } from './object/maze/maze.js';
+    import { Enemy } from './object/enemy.js';
 
     import { getOnKeyUpEvent } from './event/onKeyUp.js';
     import { getOnKeyDownEvent } from './event/onKeyDown.js';
@@ -82,6 +83,8 @@
     let sunAngle = -1 / 6 * Math.PI * 2;
     let dayDuration = 180;                               // Durasi Sehari
     let traps = [];
+    let enemies = [];
+    let enemiesObj = [];
     let flashLight;
 
     // Keperluan Senjata
@@ -94,9 +97,11 @@
     const hitSounds = [];
     const trapSounds = [];
     const winSounds = [];
+    const screamSounds = [];
     const hitSoundLoader = new THREE.AudioLoader();
     const audioLoader = new THREE.AudioLoader();
     let sprite;
+    let enemy;
 
     // Pointer Lock Control
     const blocker = document.getElementById('blocker');
@@ -160,10 +165,22 @@
         createTrap(gachaInt(-10, 10) * 40 + gachaInt(4, 36), gachaInt(-10, 10) * 40 + gachaInt(4, 36), scene, traps, 'assets/3D MODEL/Bear Trap 2/scene.gltf');
     }
 
+    // Membuat enemy
+    let countEnemy1 = 0;
+    for (let i = 0; i < countEnemy1; i++) {
+        enemy = new Enemy('assets/3D MODEL/possessed_undead (1)/scene.gltf', scene, objects, enemiesObj, 5, 5, 0);
+        enemies.push(enemy);
+    }
+
+    let countEnemy2 = 8;
+    for (let i = 0; i < countEnemy2; i++) {
+        enemy = new Enemy('assets/3D MODEL/spider_-_3december2020_day17/scene.gltf', scene, objects, enemiesObj, 0.035, 3, 1);
+        enemy.setVelocity(5);
+        enemies.push(enemy);
+    }
+
     // Senter Malem
     flashLight = createFlashLight(camera, sprite);
-    let lightHelper = new THREE.SpotLightHelper( flashLight );
-	// scene.add( lightHelper );
 
     // Audio
     // ------------------------ Handling audio
@@ -176,14 +193,17 @@
         trapSounds.push(trapSound);
         let winSound = new THREE.Audio(audioListener);
         winSounds.push(winSound);
+        let screamSound = new THREE.Audio(audioListener);
+        screamSounds.push(screamSound);
     }
     camera.add(audioListener);
 
     // Load Audio
-    loadAudio('./assets/sounds/hit.ogg', hitSoundLoader, hitSounds, gunSounds.length, 2, 0.1)
-    loadAudio('./assets/sounds/Classic.wav', audioLoader, gunSounds, gunSounds.length, 2)
-    loadAudio('./assets/sounds/beartrap.mp3', audioLoader, trapSounds, trapSounds.length, 2)
-    loadAudio('./assets/sounds/win.wav', audioLoader, winSounds, winSounds.length, 1)
+    loadAudio('./assets/sounds/cut.wav', hitSoundLoader, hitSounds, gunSounds.length, 1, 0.1)
+    loadAudio('./assets/sounds/Ghost.wav', audioLoader, gunSounds, gunSounds.length, 2, -1)
+    loadAudio('./assets/sounds/beartrap.mp3', audioLoader, trapSounds, trapSounds.length, 2, -1)
+    loadAudio('./assets/sounds/win.wav', audioLoader, winSounds, winSounds.length, 1, -1)
+    loadAudio('./assets/sounds/scream.wav', audioLoader, screamSounds, screamSounds.length, 1, -1)
 
     // Add Event to EventListener on Page
     document.addEventListener('keydown', getOnKeyDownEvent(move, velocity, flashLight));
@@ -198,16 +218,28 @@
             flash.intensity = 1;
             raycaster2.setFromCamera(new THREE.Vector2(), camera);
             raycaster2.ray.origin.copy(controls.getObject().position);
-            const intersects = raycaster2.intersectObjects(scene.children);
+            // const intersects = raycaster2.intersectObjects(enemiesObj, true);
 
-            for (let i = 0; i < intersects.length; i++) {
-                if (intersects[i].object.id != sprite.id /*&& (targets.includes(intersects[i].object))*/) { //object yang ditembak ada di array "target"
-                    if (shooting) {
-                        shooting = false;
-                        // playHitSound();
-                    }
+            // for (let i = 0; i < intersects.length; i++) {
+            //     if (intersects.length > 0) {
+            //         if (shooting) {
+            //             shooting = false;
+            //             playHitSound();
+            //             console.log(intersects[i].object);
+            //             scene.remove(intersects[i].object);
+            //         }
+            //     }
+            // }
+
+            for (let i = 0; i < enemiesObj.length; i++) {
+                const intersects = raycaster2.intersectObjects([enemiesObj[i]], true);
+                if (intersects.length > 0) {
+                    playHitSound();
+                    scene.remove(enemiesObj[i]);
+                    renderer.renderLists.dispose();
                 }
             }
+
             playGunSound();
             shooting = false;
 
@@ -269,6 +301,7 @@
                 gameOver(text);
             }
 
+            // Raycaster ke dinding
             let intersectDir;
             let front, back, right, left;
 
@@ -291,6 +324,7 @@
             collisionRay[3].ray.origin.x -= 1;
             intersectDir = collisionRay[3].intersectObjects(objects, false);
             left = intersectDir.length > 0;
+
 
             const delta = (time - prevTime) / 1000;
 
@@ -354,9 +388,6 @@
                 controls.moveForward(- velocity.z * delta);
             }
 
-
-            // console.log(velocity);
-
             controls.getObject().position.y += (velocity.y * delta); // new behavior
 
             if (controls.getObject().position.y < 10) {
@@ -368,8 +399,39 @@
 
             }
 
-            // Update Day Night
+            collisionRay[0].ray.origin.copy(controls.getObject().position);
+            collisionRay[0].ray.origin.y = 3;
+            intersectDir = collisionRay[0].intersectObjects(enemiesObj, true);
+            front = intersectDir.length > 0;
 
+            collisionRay[1].ray.origin.copy(controls.getObject().position);
+            collisionRay[1].ray.origin.y = 3;
+            intersectDir = collisionRay[1].intersectObjects(enemiesObj, true);
+            back = intersectDir.length > 0;
+
+            collisionRay[2].ray.origin.copy(controls.getObject().position);
+            collisionRay[2].ray.origin.y = 3;
+            intersectDir = collisionRay[2].intersectObjects(enemiesObj, true);
+            right = intersectDir.length > 0;
+
+            collisionRay[3].ray.origin.copy(controls.getObject().position);
+            collisionRay[3].ray.origin.y = 3;
+            intersectDir = collisionRay[3].intersectObjects(enemiesObj, true);
+            left = intersectDir.length > 0;
+
+            if (front || back || right || left) {
+                playScreamSound();
+                gameOver('<strong class="text-danger">You dead!</strong> Game Over');
+            }
+
+            // Update enemy
+            for (let i = 0; i < enemies.length; i++) {
+                enemies[i].mixer.update(delta);
+                if (enemies[i].isMoving)
+                    enemies[i].move(delta);
+            }
+
+            // Update Day Night
             sunAngle += delta / dayDuration * Math.PI * 2;
             sunSphere.update(sunAngle);
             sunLight.update(sunAngle);
@@ -429,6 +491,15 @@
         for (var i = 0; i < winSounds.length; i++) {
             if (!winSounds[i].isPlaying) {
                 winSounds[i].play();
+                break;
+            }
+        }
+    }
+
+    function playScreamSound() {
+        for (var i = 0; i < screamSounds.length; i++) {
+            if (!screamSounds[i].isPlaying) {
+                screamSounds[i].play();
                 break;
             }
         }
