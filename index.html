@@ -33,16 +33,17 @@
     <div id="blocker">
         <div id="instructions">
             <p id="click" style="font-size:36px; color: #ffffff;">
-                Click to play
+                Click here to play
             </p>
             <p id="ins" style="color: #ffffff;">
                 Move: WASD<br />
                 Jump: SPACE<br />
                 Look: MOUSE <br>
+                Flashlight: L (Toggle) <br>
                 <br>
-                Task: Get out from the maze and jump onto the red box
+                Task: Get out from maze and jump onto red box
             </p>
-            <button class="btn btn-primary" onclick="restart()">New Game</button>
+            <button class="btn btn-primary" onclick="restart()">Restart Game</button>
         </div>
 
     </div>
@@ -77,7 +78,11 @@
 
     import { loadAudio } from './lib/loadAudio.js';
 
-    $.LoadingOverlay("show");
+    $.LoadingOverlay("show", {
+        image: "",
+        progress: true
+    });
+    let loadProgress = 0;
 
     let move = new Move();                              // Status Gerakan
     let camera = createCamera(window);                  // Camera
@@ -173,9 +178,9 @@
     }
 
     // Membuat enemy
-    let countEnemy1 = 2;
+    let countEnemy1 = 3;
     for (let i = 0; i < countEnemy1; i++) {
-        enemy = new Enemy('assets/3D MODEL/possessed_undead (1)/scene.gltf', scene, objects, enemiesObj, 5, 5, 0);
+        enemy = new Enemy('assets/3D MODEL/possessed_undead (1)/scene.gltf', scene, objects, enemiesObj, 6, 5, 0);
         enemies.push(enemy);
     }
 
@@ -225,18 +230,6 @@
             flash.intensity = 1;
             raycaster2.setFromCamera(new THREE.Vector2(), camera);
             raycaster2.ray.origin.copy(controls.getObject().position);
-            // const intersects = raycaster2.intersectObjects(enemiesObj, true);
-
-            // for (let i = 0; i < intersects.length; i++) {
-            //     if (intersects.length > 0) {
-            //         if (shooting) {
-            //             shooting = false;
-            //             playHitSound();
-            //             console.log(intersects[i].object);
-            //             scene.remove(intersects[i].object);
-            //         }
-            //     }
-            // }
 
             for (let i = 0; i < enemiesObj.length; i++) {
                 const intersects = raycaster2.intersectObjects([enemiesObj[i]], true);
@@ -409,31 +402,6 @@
 
             }
 
-            // collisionRay[0].ray.origin.copy(controls.getObject().position);
-            // collisionRay[0].ray.origin.y = 3;
-            // intersectDir = collisionRay[0].intersectObjects(enemiesObj, true);
-            // front = intersectDir.length > 0;
-
-            // collisionRay[1].ray.origin.copy(controls.getObject().position);
-            // collisionRay[1].ray.origin.y = 3;
-            // intersectDir = collisionRay[1].intersectObjects(enemiesObj, true);
-            // back = intersectDir.length > 0;
-
-            // collisionRay[2].ray.origin.copy(controls.getObject().position);
-            // collisionRay[2].ray.origin.y = 3;
-            // intersectDir = collisionRay[2].intersectObjects(enemiesObj, true);
-            // right = intersectDir.length > 0;
-
-            // collisionRay[3].ray.origin.copy(controls.getObject().position);
-            // collisionRay[3].ray.origin.y = 3;
-            // intersectDir = collisionRay[3].intersectObjects(enemiesObj, true);
-            // left = intersectDir.length > 0;
-
-            // if (front || back || right || left) {
-            //     playScreamSound();
-            //     gameOver('<strong class="text-danger">You dead!</strong> Game Over');
-            // }
-
             // Update enemy
             for (let i = 0; i < enemies.length; i++) {
                 enemies[i].mixer.update(delta);
@@ -455,12 +423,24 @@
     }
 
     // Mulai
+    let objLoaded = enemiesObj.length;
+    let objLoad;
+    let oneStep = 100 / (countEnemy1 + countEnemy2);
     function timeOut() {
         setTimeout(function () {
-            if (enemiesObj[countEnemy1 + countEnemy2 - 1])
+            if (enemiesObj[countEnemy1 + countEnemy2 - 1]) {
+                $.LoadingOverlay("progress", 100);
                 $.LoadingOverlay("hide");
-            else timeOut();
-        }, 5000);
+            }
+            else {
+
+                objLoad = enemiesObj.length - objLoaded;
+                loadProgress += (oneStep * objLoad);
+
+                $.LoadingOverlay("progress", loadProgress);
+                timeOut();
+            }
+        }, 1000);
     }
     timeOut();
     animate();
