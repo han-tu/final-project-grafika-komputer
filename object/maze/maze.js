@@ -144,7 +144,7 @@ export var Maze = function (scene, objects) {
       // create a cube to represent the wall segment
       var wallGeom = new THREE.BoxGeometry(lengthX, 100, lengthY);
       var wallMaterial = new THREE.MeshPhongMaterial({
-        color: 0xffffff,
+        color: 0x9f1111,
         // opacity: 0.8,
         transparent: true
       });
