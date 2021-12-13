@@ -278,7 +278,7 @@
 
             // Jump Raycaster
             raycaster.ray.origin.copy(controls.getObject().position);
-            raycaster.ray.origin.y -= 9.9;
+            raycaster.ray.origin.y -= 5;
             const intersections = raycaster.intersectObjects(objects, false);
             const onObject = intersections.length > 0;
 
@@ -290,14 +290,22 @@
             const trapIntersect = raycaster.intersectObjects(traps, true);
             const isTrap = trapIntersect.length > 0;
 
+            // Trap Intersection
+            const enemyIntersect = raycaster.intersectObjects(enemiesObj, true);
+            const isEnemy = enemyIntersect.length > 0;
+
             let text;
-            if (isFinish || isTrap) {
+            if (isFinish || isTrap || isEnemy) {
                 if (isFinish) {
                     playWinSound();
                     text = '<strong class="text-success">Congratulation!</strong> You came out from maze safely';
                 }
-                if (isTrap) {
+                else if (isTrap) {
                     playTrapSound();
+                    text = '<strong class="text-danger">You dead!</strong> Game Over';
+                }
+                else if (isEnemy) {
+                    playScreamSound();
                     text = '<strong class="text-danger">You dead!</strong> Game Over';
                 }
                 gameOver(text);
@@ -401,30 +409,30 @@
 
             }
 
-            collisionRay[0].ray.origin.copy(controls.getObject().position);
-            collisionRay[0].ray.origin.y = 3;
-            intersectDir = collisionRay[0].intersectObjects(enemiesObj, true);
-            front = intersectDir.length > 0;
+            // collisionRay[0].ray.origin.copy(controls.getObject().position);
+            // collisionRay[0].ray.origin.y = 3;
+            // intersectDir = collisionRay[0].intersectObjects(enemiesObj, true);
+            // front = intersectDir.length > 0;
 
-            collisionRay[1].ray.origin.copy(controls.getObject().position);
-            collisionRay[1].ray.origin.y = 3;
-            intersectDir = collisionRay[1].intersectObjects(enemiesObj, true);
-            back = intersectDir.length > 0;
+            // collisionRay[1].ray.origin.copy(controls.getObject().position);
+            // collisionRay[1].ray.origin.y = 3;
+            // intersectDir = collisionRay[1].intersectObjects(enemiesObj, true);
+            // back = intersectDir.length > 0;
 
-            collisionRay[2].ray.origin.copy(controls.getObject().position);
-            collisionRay[2].ray.origin.y = 3;
-            intersectDir = collisionRay[2].intersectObjects(enemiesObj, true);
-            right = intersectDir.length > 0;
+            // collisionRay[2].ray.origin.copy(controls.getObject().position);
+            // collisionRay[2].ray.origin.y = 3;
+            // intersectDir = collisionRay[2].intersectObjects(enemiesObj, true);
+            // right = intersectDir.length > 0;
 
-            collisionRay[3].ray.origin.copy(controls.getObject().position);
-            collisionRay[3].ray.origin.y = 3;
-            intersectDir = collisionRay[3].intersectObjects(enemiesObj, true);
-            left = intersectDir.length > 0;
+            // collisionRay[3].ray.origin.copy(controls.getObject().position);
+            // collisionRay[3].ray.origin.y = 3;
+            // intersectDir = collisionRay[3].intersectObjects(enemiesObj, true);
+            // left = intersectDir.length > 0;
 
-            if (front || back || right || left) {
-                playScreamSound();
-                gameOver('<strong class="text-danger">You dead!</strong> Game Over');
-            }
+            // if (front || back || right || left) {
+            //     playScreamSound();
+            //     gameOver('<strong class="text-danger">You dead!</strong> Game Over');
+            // }
 
             // Update enemy
             for (let i = 0; i < enemies.length; i++) {
@@ -447,7 +455,7 @@
     }
 
     // Mulai
-    setTimeout(function(){
+    setTimeout(function () {
         $.LoadingOverlay("hide");
     }, 5000);
     animate();
