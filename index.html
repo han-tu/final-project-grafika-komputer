@@ -455,9 +455,14 @@
     }
 
     // Mulai
-    setTimeout(function () {
-        $.LoadingOverlay("hide");
-    }, 5000);
+    function timeOut() {
+        setTimeout(function () {
+            if (enemiesObj[countEnemy1 + countEnemy2 - 1])
+                $.LoadingOverlay("hide");
+            else timeOut();
+        }, 5000);
+    }
+    timeOut();
     animate();
     // ---
 
