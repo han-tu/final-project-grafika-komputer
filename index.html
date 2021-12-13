@@ -14,6 +14,12 @@
 
     <!-- Latest compiled JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Jquery CDN -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- Overlay Loading -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/gasparesganga-jquery-loading-overlay@2.1.7/dist/loadingoverlay.min.js"></script>
+
 
     <script>
         function restart() {
@@ -70,6 +76,8 @@
     import { Move } from './event/Move.js';
 
     import { loadAudio } from './lib/loadAudio.js';
+
+    $.LoadingOverlay("show");
 
     let move = new Move();                              // Status Gerakan
     let camera = createCamera(window);                  // Camera
@@ -130,7 +138,6 @@
     let sunSphere = new THREEx.DayNight.SunSphere();
     scene.add(sunSphere.object3d);
     let sunLight = new THREEx.DayNight.SunLight();
-    scene.add(sunLight.object3d);
     scene.add(sunLight.hemiLight);
     let skydom = new THREEx.DayNight.Skydom();
     scene.add(skydom.object3d);
@@ -160,19 +167,19 @@
     createGun(gun, camera);
 
     // Membuat Trap
-    let countTrap = 100;
+    let countTrap = 80;
     for (let i = 0; i < countTrap; i++) {
         createTrap(gachaInt(-10, 10) * 40 + gachaInt(4, 36), gachaInt(-10, 10) * 40 + gachaInt(4, 36), scene, traps, 'assets/3D MODEL/Bear Trap 2/scene.gltf');
     }
 
     // Membuat enemy
-    let countEnemy1 = 0;
+    let countEnemy1 = 4;
     for (let i = 0; i < countEnemy1; i++) {
         enemy = new Enemy('assets/3D MODEL/possessed_undead (1)/scene.gltf', scene, objects, enemiesObj, 5, 5, 0);
         enemies.push(enemy);
     }
 
-    let countEnemy2 = 8;
+    let countEnemy2 = 5;
     for (let i = 0; i < countEnemy2; i++) {
         enemy = new Enemy('assets/3D MODEL/spider_-_3december2020_day17/scene.gltf', scene, objects, enemiesObj, 0.035, 3, 1);
         enemy.setVelocity(5);
@@ -268,11 +275,6 @@
                 flashTimer = 0;
                 flash.intensity = 0;
             }
-
-            // menambahkan sprite crosshair
-            var dir = controls.getDirection(direction);
-            var dirV = new THREE.Vector3(dir.x, dir.y, dir.z);
-            dirV.multiplyScalar(2);
 
             // Jump Raycaster
             raycaster.ray.origin.copy(controls.getObject().position);
@@ -434,7 +436,6 @@
             // Update Day Night
             sunAngle += delta / dayDuration * Math.PI * 2;
             sunSphere.update(sunAngle);
-            sunLight.update(sunAngle);
             skydom.update(sunAngle);
             starField.update(sunAngle);
         }
@@ -446,6 +447,9 @@
     }
 
     // Mulai
+    setTimeout(function(){
+        $.LoadingOverlay("hide");
+    }, 5000);
     animate();
     // ---
 

@@ -89,7 +89,6 @@ export class Enemy {
             this.url,
             (gltf) => {
                 let scale = this.scale;
-                console.log(scale);
                 model = gltf.scene;
                 model.scale.set(scale, scale, scale);
                 model.position.set(this.gachaInt(-10, 10) * 40 + this.gachaInt(4, 36), this.y, this.gachaInt(-10, 10) * 40 + this.gachaInt(4, 36));
