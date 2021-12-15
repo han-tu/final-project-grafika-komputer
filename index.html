@@ -33,7 +33,7 @@
     <div id="blocker">
         <div id="instructions">
             <p id="click" style="font-size:36px; color: #ffffff;">
-                Click here to play
+                Click anywhere to play
             </p>
             <p id="ins" style="color: #ffffff;">
                 Move: WASD<br />
@@ -41,9 +41,11 @@
                 Look: MOUSE <br>
                 Flashlight: L (Toggle) <br>
                 <br>
-                Task: Get out from maze and jump onto red box
+                Task: Get out from maze and jump onto red box <br>
+                Hint: Check 1 out of 4 maze corner
             </p>
-            <button class="btn btn-primary" onclick="restart()">Restart Game</button>
+            <p class="text-danger">Beware! You are not alone here</p>
+            <button class="btn btn-primary" onclick="restart()">Reload Game</button>
         </div>
 
     </div>
@@ -140,7 +142,6 @@
     let f2 = createFinishBox(20, 0xff1234, 415, -415, scene, finish);
     let f3 = createFinishBox(20, 0xff1234, -415, 415, scene, finish);
     let f4 = createFinishBox(20, 0xff1234, -415, -415, scene, finish);
-    // let f5 = createFinishBox(20, 0xff1234, 0, 0, scene, finish);
 
     // Day Night Environment
     let sunSphere = new THREEx.DayNight.SunSphere();
@@ -213,8 +214,6 @@
         let backSound = new THREE.Audio(audioListener);
         backSounds.push(backSound);
     }
-    // for (let i = 0 ; i < 3 ; i++) {
-    // }
     camera.add(audioListener);
 
     // Load Audio
